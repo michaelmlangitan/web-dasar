@@ -10,6 +10,7 @@ namespace App\Twig;
 
 use App\Entity\Option;
 use App\Repository\OptionRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 use function array_key_exists;
@@ -21,13 +22,18 @@ class OptionExtension extends AbstractExtension
     /** @var array|Option[] */
     private array $options = [];
 
-    public function __construct(OptionRepository $repository)
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $this->repository = $repository;
-        $this->initAutoloadOptions();
+        $this->repository = $entityManager->getRepository(Option::class);
+
+        // check connection before creating data in order to escape database errors when
+        // executing commands such as clearing cache without activating the database server
+        if ($entityManager->getConnection()->isConnected()) {
+            $this->initAutoloadOptions();
+        }
     }
 
-    private function initAutoloadOptions()
+    private function initAutoloadOptions(): void
     {
         $options = $this->repository->findAllAutoload();
         foreach ($options as $option) {
